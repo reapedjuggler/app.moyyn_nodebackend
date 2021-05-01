@@ -111,8 +111,6 @@ router.post('/delete', async function (req, res) {
 
 });
 
-var cpUpload = upload.fields([{ name: 'cvEnglish', maxCount: 1 }, { name: 'cvGerman', maxCount: 1 }]);
-
 router.post('/getuser', async function (req, res) {
 
   var candidate_id = req.body.candidate_id;
@@ -126,58 +124,69 @@ router.post('/getuser', async function (req, res) {
 
 
 
-router.post('/editprofile', cpUpload, async function (req, res) {
+router.post('/editprofile',  async function (req, res) {
 
   var candidate_id = req.body.candidate_id;
 
-  var cvEnglish = req.body.cvEnglish;
-  var cvGerman = req.body.cvGerman || "File Not uploaded";
+  try {
+    var data = req.body;
+    var cvEnglish = data[1].cvEnglish;
+    var cvGerman = data[1].cvGerman;
 
-  //to check if file is loaded correctly
-  if (req.file) {
-    cvEnglish = req.file.cvEnglish;
-    cvGerman = req.file.cvGerman || "File Not uploaded";
-  } else {
-    // console.log("Error in uploading files.");
-  }
+    let decodedBase64English = "";
+    let decodedBase64German = "";
 
-  // console.log(req.files['cvEnglish'][0].filename);
-  // console.log(req.files['cvGerman'][0].filename);
+    if (cvEnglish.data !== null) decodedBase64English = base64.atob(cvEnglish.data);
+    if (cvGerman.data !== null) decodedBase64German = base64.atob(cvGerman.data);
 
-  var desiredPositions = req.body.desiredPositions;
-  var relocationWillingnessFlag = req.body.relocationWillingnessFlag;
+    if (cvEnglish.data !== null) {
+      fs.writeFile("cvData/English_CV/" + cvEnglish.fileName, decodedBase64English, 'binary', function (err) {
+        if (err) {
+          return console.log(err);
+        }
+        console.log("English pdf saved!");
+      });
+    }
 
-  var country = req.body.country;
-  var city = req.body.city;
-  var visaType = req.body.visaType;
-  var earliestJoiningDate = req.body.earliestJoiningDate;
-  var currentlyEmployedFlag = req.body.currentlyEmployedFlag || false;
-  var drivingPermitFlag = req.body.drivingPermitFlag;
-  var contactNumber = req.body.contactNumber;
-  var noticePeriod = req.body.noticePeriod;
-  var desiredEmployment = req.body.desiredEmployment;
+    if (cvGerman.data !== null) {
+      fs.writeFile("cvData/German_CV/" + cvGerman.fileName, decodedBase64German, 'binary', function (err) {
+        if (err) {
+          return console.log(err);
+        }
+        console.log("German pdf saved!");
+      });
+    }
 
-  var careerLevel = req.body.careerLevel;
-  var industries = req.body.industries;
-  var skills = req.body.skills;
-  var workExperience = req.body.workExperience;
-  var languages = req.body.languages;
-  var onlineProfiles = req.body.onlineProfiles;
+    var desiredPositions = data[1].desiredPositions;
+    var relocationWillingnessFlag = data[3].relocationWillingnes;
+    var country = data[2].country;
+    var city = data[2].city;
+    var visaType = data[2].visaType;
+    var earliestJoiningDate = data[2].earliestJoiningDate;
+    var currentlyEmployedFlag = data[2].currentlyEmployedFlag || false;
+    var drivingPermitFlag = data[2].drivingPermitFlag;
+    var contactNumber = data[2].contactNumber;
+    var noticePeriod = data[2].noticePeriod;
+    var desiredEmployment = data[3].desiredEmployment;
+    var careerLevel = data[4].careerLevel;
+    var industries = data[4].industries;
+    var skills = data[4].skills;
+    var workExperience = data[4].workExperience;
+    var languages = data[4].languages;
+    var onlineProfiles = data[3].onlineProfiles;
+    var cityPreferences = data[3].cityPreferences;
+    var countryPreferences = data[3].countryPreferences;
 
-
-  // Check Errors
-  var errors = req.validationErrors();
-
-  if (errors) {
-    res.send({
-      success: false,
-      errors: errors,
-    })
-  } else {
     var userData = {};
 
-    userData.cvEnglish = req.files['cvEnglish'][0].filename;
-    userData.cvGerman = req.files['cvGerman'][0].filename || null;
+    userData.firstName = firstName;
+    userData.lastName = lastName;
+    userData.email = email;
+    userData.activeJobSeeking = activeJobSeeking;
+    userData.termsAndPrivacyFlag = termsAndPrivacyFlag;
+    userData.password = password
+    userData.cvEnglish = cvEnglish.fileName;
+    userData.cvGerman = cvGerman.fileName;
     userData.desiredPositions = desiredPositions;
     userData.relocationWillingnessFlag = relocationWillingnessFlag;
     userData.desiredEmployment = desiredEmployment;
@@ -188,6 +197,8 @@ router.post('/editprofile', cpUpload, async function (req, res) {
     userData.earliestJoiningDate = earliestJoiningDate;
     userData.currentlyEmployedFlag = currentlyEmployedFlag;
     userData.drivingPermitFlag = drivingPermitFlag;
+    userData.cityPreferences = cityPreferences;
+    userData.countryPreferences = countryPreferences;
     userData.contactNumber = contactNumber;
     userData.noticePeriod = noticePeriod;
     userData.careerLevel = careerLevel;
@@ -196,24 +207,19 @@ router.post('/editprofile', cpUpload, async function (req, res) {
     userData.workExperience = workExperience;
     userData.languages = languages;
 
-    // var newUser = new User(userData);
-
-
     await User.updateOne({ _id: candidate_id }, { $set: userData }, function (err, user) {
-      if (err) {
-        res.send({
-          success: false,
-          msg: err
-        })
-      } else {
         res.send({
           success: true,
           msg: "Updated Successfully"
         })
-      }
-
-
     });
+
+
+  }catch(err){
+    res.send({
+      success: false,
+      msg: err
+    })
   }
 
 });
